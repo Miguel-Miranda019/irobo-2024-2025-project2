@@ -44,10 +44,11 @@ namespace rrt_planner {
                 
                 if(computeDistance(p_new, goal_) <= params_.goal_tolerance){
                     double path_length = computePathLength();
-                    if(prev_path_length < prev_path_length || prev_path_length == 0){
+                    if(path_length < prev_path_length || prev_path_length == 0){
                         prev_path_length = path_length;
                         return true;
                     }
+                    //return true;
                 }
             }
         }
@@ -167,9 +168,15 @@ namespace rrt_planner {
     }
 
     void RRTPlanner::setGoal(double *goal) {
-
+        if(goalBuf_[0] != goal[0] || goalBuf_[1] != goal[1]){
+            prev_path_length = 0;
+            std::cout << "BANANA" << std::endl;
+        }
         goal_[0] = goal[0];
         goal_[1] = goal[1];
+
+        goalBuf_[0] = goal[0];
+        goalBuf_[1] = goal[1];
     }
 
 };

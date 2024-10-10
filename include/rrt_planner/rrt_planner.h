@@ -80,7 +80,7 @@ namespace rrt_planner {
 
             
             private:
-                double start_[2], goal_[2];
+                double start_[2], goal_[2], goalBuf_[2];
                 double rand_point_[2], candidate_point_[2];
                 float map_width_, map_height_;
                 costmap_2d::Costmap2D* costmap_;
