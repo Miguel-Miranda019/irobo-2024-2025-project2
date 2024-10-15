@@ -43,12 +43,12 @@ namespace rrt_planner {
             if(k > params_.min_num_nodes) {
                 
                 if(computeDistance(p_new, goal_) <= params_.goal_tolerance){
-                    double path_length = computePathLength();
-                    if(path_length < prev_path_length || prev_path_length == 0){
+                    //double path_length = computePathLength();
+                    /*if(path_length < prev_path_length || prev_path_length == 0){
                         prev_path_length = path_length;
                         return true;
-                    }
-                    //return true;
+                    } */
+                    return true;
                 }
             }
         }
@@ -109,7 +109,7 @@ namespace rrt_planner {
         double random_prob = random_double_x.generate();
 
         //prob of sampling near the goal
-        double near_goal_probability = 0.5;
+        double near_goal_probability = 0.2;
 
         if(random_prob < near_goal_probability){
             //vector from the robot to the goal
@@ -170,7 +170,7 @@ namespace rrt_planner {
     void RRTPlanner::setGoal(double *goal) {
         if(goalBuf_[0] != goal[0] || goalBuf_[1] != goal[1]){
             prev_path_length = 0;
-            std::cout << "BANANA" << std::endl;
+            std::cout << "check" << std::endl;
         }
         goal_[0] = goal[0];
         goal_[1] = goal[1];
