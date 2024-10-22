@@ -161,38 +161,33 @@ namespace rrt_planner {
     }
 
     double* RRTPlanner::sampleRandomPoint() { //MOD
-        //generate a random prob in the range [0,1]
         double random_prob = random_double_x.generate();
-
-        //prob of sampling near the goal
-        double near_goal_probability = 0.9;
+        double near_goal_probability = 1;
 
         double *random_point_ = new double[2];
 
         if(random_prob < near_goal_probability){
-            //vector from the robot to the goal
             double vec_to_goal_x = goal_[0] - start_[0];
             double vec_to_goal_y = goal_[1] - start_[1];
 
-            //calculate the angle
             double angle_to_goal = atan2(vec_to_goal_y, vec_to_goal_x);
 
-            double random_angle_offset = (M_PI / 2) * (2 * random_double_x.generate() - 1);
+            double cone_angle = M_PI / 6;
+            double random_angle_offset = cone_angle * (2 * random_double_x.generate() - 1);
 
             double random_angle = angle_to_goal + random_angle_offset;
 
-            double max_distance = 0.1;
+            double max_distance = 0.3;
             double random_distance = max_distance * random_double_x.generate();
 
-            rand_point_[0] = start_[0] + random_distance * cos(random_angle);
-            rand_point_[1] = start_[1] + random_distance * sin(random_angle);
-
+            random_point_[0] = start_[0] + random_distance * cos(random_angle);
+            random_point_[1] = start_[1] + random_distance * sin(random_angle);
         } else {
-            rand_point_[0] = random_double_x.generate();
-            rand_point_[1] = random_double_y.generate();
+            random_point_[0] = random_double_x.generate();
+            random_point_[1] = random_double_y.generate();
         }
 
-        return rand_point_;
+        return random_point_;
     }
 
     double* RRTPlanner::extendTree(const double* point_nearest, const double* point_rand) { //MOD
