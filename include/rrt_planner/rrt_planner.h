@@ -18,7 +18,7 @@ namespace rrt_planner {
              * @param costmap A pointer to the costmap to use for planning.
              * @param params Struct with parameters to build the tree.
              */
-            RRTPlanner(costmap_2d::Costmap2DROS *costmap, const rrt_params& params);
+            RRTPlanner(costmap_2d::Costmap2DROS *costmap, const rrt_params& params, ros::Publisher& vertices_pub, ros::Publisher& edges_pub);
 
             /**
              * @brief   Plan a path using RRT
@@ -31,7 +31,7 @@ namespace rrt_planner {
              * @return 2D random planar position (x, y)
              */
             double *sampleRandomPoint();
-            double computePathLength();
+            double computePathLength(); // not used
 
             /**
              * @brief Get the index of the nearest node around the new random point
@@ -80,7 +80,7 @@ namespace rrt_planner {
 
             
             private:
-                double start_[2], goal_[2], goalBuf_[2];
+                double start_[2], goal_[2];
                 double rand_point_[2], candidate_point_[2];
                 float map_width_, map_height_;
                 costmap_2d::Costmap2D* costmap_;
@@ -88,8 +88,8 @@ namespace rrt_planner {
                 rrt_params params_;
                 CollisionDetector collision_dect_;
                 RandomDoubleGenerator random_double_x, random_double_y;
-                double prev_path_length = 0;
                 int node_num;
+                ros::Publisher vertices_pub_, edges_pub_;
 
     };
 

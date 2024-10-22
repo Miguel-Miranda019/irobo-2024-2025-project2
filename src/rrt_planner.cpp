@@ -1,10 +1,18 @@
 
 #include <rrt_planner/rrt_planner.h>
+#include <pluginlib/class_list_macros.h>
+#include <graph_msgs/GeometryGraph.h>
+#include <graph_msgs/Edges.h>
+#include <sensor_msgs/PointCloud.h>
+
+#include <unordered_map>
+#include <visualization_msgs/Marker.h>
+#include <geometry_msgs/Point.h>
 
 namespace rrt_planner {
 
     RRTPlanner::RRTPlanner(costmap_2d::Costmap2DROS *costmap, 
-            const rrt_params& params) : params_(params), collision_dect_(costmap) {
+            const rrt_params& params, ros::Publisher &vertices_pub, ros::Publisher &edges_pub) : params_(params), collision_dect_(costmap), vertices_pub_(vertices_pub), edges_pub_(edges_pub) {
 
         costmap_ = costmap->getCostmap();
         node_num = 0;
@@ -100,7 +108,56 @@ namespace rrt_planner {
 
         //add the new node to the tree
         nodes_.push_back(new_node);
-        
+
+        sensor_msgs::PointCloud cloud;
+        cloud.header.frame_id = "map";
+        cloud.header.stamp = ros::Time::now();
+
+        for (Node n : nodes_)
+        {
+            geometry_msgs::Point32 p;
+            p.x = n.pos[0];
+            p.y = n.pos[1];
+            p.z = 0.0;
+            cloud.points.push_back(p);
+        }
+
+        vertices_pub_.publish(cloud);
+
+        visualization_msgs::Marker edges;
+        edges.header.frame_id = "map";
+        edges.ns = "tree_edges";
+        edges.type = visualization_msgs::Marker::LINE_LIST;
+        edges.action = visualization_msgs::Marker::ADD;
+
+        edges.pose.orientation.w = 1.0;
+        edges.scale.x = 0.01;
+
+        edges.color.r = 1.0;
+        edges.color.a = 1.0;
+
+        for (const auto &node : nodes_)
+        {
+            if (node.parent_id == -1)
+                continue;
+
+            geometry_msgs::Point start, end;
+
+            const auto &parent = nodes_[node.parent_id];
+
+            start.x = parent.pos[0];
+            start.y = parent.pos[1];
+            start.z = 0.0;
+
+            end.x = node.pos[0];
+            end.y = node.pos[1];
+            end.z = 0.0;
+
+            edges.points.push_back(start);
+            edges.points.push_back(end);
+        }
+
+        edges_pub_.publish(edges);         
     }
 
     double* RRTPlanner::sampleRandomPoint() { //MOD
@@ -108,7 +165,7 @@ namespace rrt_planner {
         double random_prob = random_double_x.generate();
 
         //prob of sampling near the goal
-        double near_goal_probability = 0;
+        double near_goal_probability = 0.9;
 
         double *random_point_ = new double[2];
 

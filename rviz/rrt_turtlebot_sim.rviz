@@ -340,6 +340,14 @@ Visualization Manager:
       Topic: /robot_path_amcl
       Unreliable: false
       Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /move_base/RRTPlannerROS/edges
+      Name: Marker
+      Namespaces:
+        tree_edges: true
+      Queue Size: 100
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -368,7 +376,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 7.1770524978637695
+      Distance: 6.135220527648926
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -404,5 +412,5 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 1642
-  X: 866
-  Y: 342
+  X: 549
+  Y: 304

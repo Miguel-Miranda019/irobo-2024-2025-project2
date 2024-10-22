@@ -1,6 +1,8 @@
 
 #include <rrt_planner/rrt_planner_ros.h>
 #include <pluginlib/class_list_macros.h>
+#include <sensor_msgs/PointCloud.h>
+#include <visualization_msgs/Marker.h>
 
 // register this planner as a BaseGlobalPlanner plugin
 PLUGINLIB_EXPORT_CLASS(rrt_planner::RRTPlannerROS, nav_core::BaseGlobalPlanner)
@@ -39,8 +41,11 @@ namespace rrt_planner {
             nh.param("rrt/max_num_nodes", params_.max_num_nodes, 30000);
 
             plan_pub_ = nh.advertise<nav_msgs::Path>("global_plan", 1);
+            ros::Publisher vertices_pub = nh.advertise<visualization_msgs::Marker>("vertices", 1);
+            ros::Publisher edges_pub = nh.advertise<visualization_msgs::Marker>("edges", 1);
+            ros::Publisher pub = nh.advertise<sensor_msgs::PointCloud>("global_plan_pointcloud", 1);
 
-            planner_ = std::shared_ptr<RRTPlanner>(new RRTPlanner(costmap, params_));
+            planner_ = std::shared_ptr<RRTPlanner>(new RRTPlanner(costmap, params_, vertices_pub, edges_pub));
             initialized_ = true;
         }
         else {

@@ -16,6 +16,9 @@ find_package(catkin REQUIRED COMPONENTS
   pluginlib
   roscpp
   rospy
+  graph_msgs
+  actionlib
+  move_base_msgs
 )
 
 ###################################
