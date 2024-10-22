@@ -162,7 +162,7 @@ namespace rrt_planner {
 
     double* RRTPlanner::sampleRandomPoint() { //MOD
         double random_prob = random_double_x.generate();
-        double near_goal_probability = 1;
+        double near_goal_probability = 0.6;
 
         double *random_point_ = new double[2];
 
