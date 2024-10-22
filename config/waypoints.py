@@ -39,10 +39,14 @@ if __name__ == '__main__':
         rospy.init_node('waypoint_nav')
 
         waypoints = [
-            (-0.395, 1.74, 0.00304),  # Waypoint 1
-            (0.606, 0.406, 0.00397),  # Waypoint 2
-            (-0.478, -1.63, 0),  # Waypoint 3
-            (-1.79, 0.458, 0.0)    # Waypoint 4
+            #(-0.395, 1.74, 0.00304),  # Waypoint 1
+            #(0.606, 0.406, 0.00397),  # Waypoint 2
+            #(-0.478, -1.63, 0),  # Waypoint 3
+            #(-1.79, 0.458, 0.0)    # Waypoint 4
+
+            (-0.36, 1.85, 0),
+            (0.563, -0.54, 0),
+            (1.88, 0.458, 0)
         ]
 
         for waypoint in waypoints:

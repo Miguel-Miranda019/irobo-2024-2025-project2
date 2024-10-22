@@ -20,6 +20,8 @@
   <build_depend>nav_core</build_depend>
   <build_depend>pluginlib</build_depend>
   <build_depend>roscpp</build_depend>
+  <build_depend>rospy</build_depend>
+  <build_depend>tf2_ros</build_depend>
 
   <exec_depend>costmap_2d</exec_depend>
   <exec_depend>geometry_msgs</exec_depend>
@@ -29,6 +31,8 @@
   <exec_depend>nav_core</exec_depend>
   <exec_depend>pluginlib</exec_depend>
   <exec_depend>roscpp</exec_depend>
+  <exec_depend>rospy</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
 
   <export>
     <nav_core plugin="${prefix}/rrt_planner_plugin.xml"/>

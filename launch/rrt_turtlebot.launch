@@ -6,6 +6,9 @@
   <arg name="cmd_vel_topic" default="/cmd_vel"/>
   <arg name="odom_topic" default="odom"/>
 
+  <!-- Turtlebot3 Gazebo World -->
+  <include file="$(find rrt_planner)/launch/turtlebot3_world.launch"/>
+
   <!-- Turtlebot3 -->
   <include file="$(find turtlebot3_bringup)/launch/turtlebot3_remote.launch">
     <arg name="model" value="$(arg model)"/>
@@ -16,10 +19,11 @@
 
   <!-- AMCL -->
   <include file="$(find turtlebot3_navigation)/launch/amcl.launch">
-    <arg name="initial_pose_x" default="0.0"/>
-    <arg name="initial_pose_y" default="0.0"/>
+    <arg name="initial_pose_x" default="-2.0"/>
+    <arg name="initial_pose_y" default="-0.5"/>
     <arg name="initial_pose_a" default="0.0"/>
   </include>
+  <node name="amcl_path_publisher" pkg="rrt_planner" type="amcl_path.py"></node>
 
   <!-- move_base -->
   <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">

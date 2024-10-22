@@ -89,6 +89,7 @@ namespace rrt_planner {
                 CollisionDetector collision_dect_;
                 RandomDoubleGenerator random_double_x, random_double_y;
                 double prev_path_length = 0;
+                int node_num;
 
     };
 

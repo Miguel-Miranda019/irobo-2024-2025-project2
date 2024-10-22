@@ -29,11 +29,13 @@ namespace rrt_planner {
             return false;
         } */
 
+        return cost == costmap_2d::FREE_SPACE;
+        /*
         if(cost >= 128 || cost == costmap_2d::NO_INFORMATION){
             return false;
         }
 
-        return true;
+        return true;*/
 
     }
 

@@ -9,11 +9,13 @@ find_package(catkin REQUIRED COMPONENTS
   costmap_2d
   geometry_msgs
   nav_msgs
+  tf2_ros
   tf2_geometry_msgs
   tf2
   nav_core
   pluginlib
   roscpp
+  rospy
 )
 
 ###################################
@@ -23,7 +25,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME}
-  CATKIN_DEPENDS costmap_2d geometry_msgs nav_msgs tf2_geometry_msgs tf2 nav_core pluginlib roscpp
+  CATKIN_DEPENDS costmap_2d geometry_msgs nav_msgs tf2_geometry_msgs tf2 nav_core pluginlib roscpp rospy tf2_ros 
 )
 
 ###########
@@ -40,6 +42,7 @@ add_library(${PROJECT_NAME}
   src/rrt_planner.cpp
   src/collision_detector.cpp
   src/random_double_generator.cpp
+  scripts/amcl_path.py
 )
 
 target_link_libraries(${PROJECT_NAME}

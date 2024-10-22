@@ -7,6 +7,7 @@ namespace rrt_planner {
             const rrt_params& params) : params_(params), collision_dect_(costmap) {
 
         costmap_ = costmap->getCostmap();
+        node_num = 0;
         map_width_  = costmap_->getSizeInMetersX();
         map_height_ = costmap_->getSizeInMetersY();
 
@@ -19,6 +20,7 @@ namespace rrt_planner {
     bool RRTPlanner::planPath() {
 
         // clear everything before planning
+        node_num = 0;
         nodes_.clear();
 
         // Start Node
@@ -27,7 +29,7 @@ namespace rrt_planner {
         double *p_rand, *p_new;
         Node nearest_node;
 
-        for (unsigned int k = 1; k <= params_.max_num_nodes; k++) {
+        for (unsigned int k = 1; k <= params_.max_num_nodes;) {
 
             p_rand = sampleRandomPoint();
             nearest_node = nodes_[getNearestNodeId(p_rand)];
@@ -35,6 +37,7 @@ namespace rrt_planner {
 
             if (!collision_dect_.obstacleBetween(nearest_node.pos, p_new)) {
                 createNewNode(p_new, nearest_node.node_id);
+                k++;
 
             } else {
                 continue;
@@ -42,12 +45,7 @@ namespace rrt_planner {
 
             if(k > params_.min_num_nodes) {
                 
-                if(computeDistance(p_new, goal_) <= params_.goal_tolerance){
-                    //double path_length = computePathLength();
-                    /*if(path_length < prev_path_length || prev_path_length == 0){
-                        prev_path_length = path_length;
-                        return true;
-                    } */
+                if(computeDistance(p_new, goal_) <= params_.goal_tolerance) {
                     return true;
                 }
             }
@@ -56,6 +54,7 @@ namespace rrt_planner {
         return false;
     }
 
+    // not used
     double RRTPlanner::computePathLength(){
         double path_length = 0;
         int node_id = nodes_.size() - 1;
@@ -77,7 +76,7 @@ namespace rrt_planner {
 
             if(dist < min_dist){
                 min_dist = dist;
-                nearest_node_id = i;
+                nearest_node_id = nodes_[i].node_id;
             }
         }
 
@@ -97,10 +96,10 @@ namespace rrt_planner {
         new_node.parent_id = parent_node_id;
 
         //set the node ID as the next available ID in the nodes vector
-        new_node.node_id = nodes_.size();
+        new_node.node_id = node_num++;
 
         //add the new node to the tree
-        nodes_.emplace_back(new_node);
+        nodes_.push_back(new_node);
         
     }
 
@@ -109,7 +108,9 @@ namespace rrt_planner {
         double random_prob = random_double_x.generate();
 
         //prob of sampling near the goal
-        double near_goal_probability = 0.2;
+        double near_goal_probability = 0;
+
+        double *random_point_ = new double[2];
 
         if(random_prob < near_goal_probability){
             //vector from the robot to the goal
@@ -141,8 +142,6 @@ namespace rrt_planner {
 
         // Compute the distance between nearest and rand
         double distance = computeDistance(point_nearest, point_rand);
-        double direction_x = point_rand[0] - point_nearest[0];
-        double direction_y = point_rand[1] - point_nearest[1];
 
         // If dist is less than the value of step then candidate point is the random point
         if(distance <= params_.step){
@@ -168,15 +167,8 @@ namespace rrt_planner {
     }
 
     void RRTPlanner::setGoal(double *goal) {
-        if(goalBuf_[0] != goal[0] || goalBuf_[1] != goal[1]){
-            prev_path_length = 0;
-            std::cout << "check" << std::endl;
-        }
         goal_[0] = goal[0];
         goal_[1] = goal[1];
-
-        goalBuf_[0] = goal[0];
-        goalBuf_[1] = goal[1];
     }
 
 };
