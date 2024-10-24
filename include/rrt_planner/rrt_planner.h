@@ -13,13 +13,23 @@ namespace rrt_planner {
     class RRTPlanner {
 
         public:
+        
+            int num_paths_calculated;
+            int num_paths_calculated_success;
+	     int num_nodes_blocked;
+	     float total_path_calc_time;
+	     int num_nodes;
+	     int num_iterations;
+	     bool new_goal;
+	     double old_goal_[2];
+	     ros::Time start_time;
             /**
              * @brief Constructor for the RRTPlanner object.
              * @param costmap A pointer to the costmap to use for planning.
              * @param params Struct with parameters to build the tree.
              */
             RRTPlanner(costmap_2d::Costmap2DROS *costmap, const rrt_params& params, ros::Publisher& vertices_pub, ros::Publisher& edges_pub);
-
+	     ~RRTPlanner();
             /**
              * @brief   Plan a path using RRT
              * @return  True if found, false otherwise 
@@ -45,7 +55,7 @@ namespace rrt_planner {
              * @param pos 2D coordinates of the new node
              * @param parent_node_id Id of the parent node of the new node
              */
-            void createNewNode(const double* pos, int parent_node_id);
+            Node createNewNode(const double* pos, int parent_node_id);
 
             /** 
              * @brief Connect the sampled random point to nearest tree node.
@@ -76,8 +86,7 @@ namespace rrt_planner {
              */
             const std::vector<Node>& getTree();
 
-            ~RRTPlanner() {};
-
+	     void logMetrics(Node);
             
             private:
                 double start_[2], goal_[2];
@@ -90,6 +99,7 @@ namespace rrt_planner {
                 RandomDoubleGenerator random_double_x, random_double_y;
                 int node_num;
                 ros::Publisher vertices_pub_, edges_pub_;
+                std::ofstream log_file_;
 
     };
 

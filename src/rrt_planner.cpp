@@ -9,6 +9,11 @@
 #include <visualization_msgs/Marker.h>
 #include <geometry_msgs/Point.h>
 
+#include <ros/ros.h>
+#include <limits>
+#include <cmath>
+#include <fstream>
+
 namespace rrt_planner {
 
     RRTPlanner::RRTPlanner(costmap_2d::Costmap2DROS *costmap, 
@@ -23,43 +28,77 @@ namespace rrt_planner {
         random_double_y.setRange(-map_height_, map_height_);
 
         nodes_.reserve(params_.max_num_nodes);
+
+        num_paths_calculated = 0;
+        num_paths_calculated_success = 0;
+        num_nodes_blocked = 0;
+        total_path_calc_time = 0;
+        new_goal=false;
+        num_nodes = 0;
+        num_iterations = 0;
+
+        log_file_.open("/home/ir-labs/catkin_ws/src/rrt_planner/src/rrt_planer_metrics.csv", std::ios::out | std::ios::app);
+
+        if (log_file_.tellp() == 0){
+            log_file_ << "NumPathsCalculated, NumIterations, NumPathsSuccess, NumPathsBlocked, PathCalcTime, NumNodes, NodesUsedInPath, IsNewGoal\n";
+        }
     }
 
     bool RRTPlanner::planPath() {
 
+	if(goal_[0] != old_goal_[0] || goal_[0] != old_goal_[0] ){
+		new_goal = true;
+		old_goal_[0] = goal_[0];
+		old_goal_[1] = goal_[1];
+	}else{
+		new_goal = false;
+	}
+        start_time = ros::Time::now();
+
         // clear everything before planning
         node_num = 0;
         nodes_.clear();
+        num_nodes = 0;
+        num_nodes_blocked = 0;
+        num_iterations = 0;
 
         // Start Node
         createNewNode(start_, -1);
 
         double *p_rand, *p_new;
         Node nearest_node;
+        Node last_node;
+        bool success = false;
 
         for (unsigned int k = 1; k <= params_.max_num_nodes;) {
-
+            num_iterations++;
             p_rand = sampleRandomPoint();
             nearest_node = nodes_[getNearestNodeId(p_rand)];
             p_new = extendTree(nearest_node.pos, p_rand); // new point and node candidate
 
             if (!collision_dect_.obstacleBetween(nearest_node.pos, p_new)) {
-                createNewNode(p_new, nearest_node.node_id);
+                last_node = createNewNode(p_new, nearest_node.node_id);
                 k++;
 
             } else {
+                num_nodes_blocked++;
                 continue;
             }
 
             if(k > params_.min_num_nodes) {
                 
                 if(computeDistance(p_new, goal_) <= params_.goal_tolerance) {
-                    return true;
+                    success = true;
+                    num_paths_calculated_success++;
+                    break;
                 }
             }
         }
-
-        return false;
+        ros::Duration calc_time = ros::Time::now() - start_time;
+        total_path_calc_time += calc_time.toSec();
+        num_paths_calculated++;
+        logMetrics(last_node); 
+        return success;
     }
 
     // not used
@@ -92,7 +131,7 @@ namespace rrt_planner {
 
     }
 
-    void RRTPlanner::createNewNode(const double* pos, int parent_node_id) { //MOD
+    Node RRTPlanner::createNewNode(const double* pos, int parent_node_id) { //MOD
 
         Node new_node;
 
@@ -157,7 +196,9 @@ namespace rrt_planner {
             edges.points.push_back(end);
         }
 
-        edges_pub_.publish(edges);         
+        edges_pub_.publish(edges); 
+        num_nodes++;
+        return new_node;        
     }
 
     double* RRTPlanner::sampleRandomPoint() { //MOD
@@ -221,6 +262,27 @@ namespace rrt_planner {
     void RRTPlanner::setGoal(double *goal) {
         goal_[0] = goal[0];
         goal_[1] = goal[1];
+    }
+
+    void RRTPlanner::logMetrics(Node node){
+          ROS_INFO("Log Metrics (%d)", num_paths_calculated);
+        Node next_node = node;
+        int count = 1;
+        while(next_node.parent_id > 0){
+            count++;
+            next_node = nodes_[next_node.parent_id];
+        }
+        if(log_file_.is_open()){
+            log_file_ << num_paths_calculated << "," << num_iterations  << "," << num_paths_calculated_success  << "," << num_nodes_blocked  << "," << total_path_calc_time  << "," << num_nodes  << "," << count  << "," << new_goal << "\n";
+        }else{
+            std::cerr << "unable to open lg file for writng." << std::endl;
+        }
+    }       
+
+    RRTPlanner::~RRTPlanner(){
+        if(log_file_.is_open()){
+            log_file_.close();
+        }
     }
 
 };
