@@ -14,6 +14,9 @@
 #include <cmath>
 #include <fstream>
 
+#include <tf/tf.h>
+#include <geometry_msgs/PoseWithCovarianceStamped.h>
+
 namespace rrt_planner {
 
     RRTPlanner::RRTPlanner(costmap_2d::Costmap2DROS *costmap, 
@@ -37,10 +40,15 @@ namespace rrt_planner {
         num_nodes = 0;
         num_iterations = 0;
 
-        log_file_.open("/home/ir-labs/catkin_ws/src/rrt_planner/src/rrt_planer_metrics.csv", std::ios::out | std::ios::app);
+        last_amcl_pose_[0] = std::numeric_limits<double>::quiet_NaN();
+        last_amcl_pose_[1] = std::numeric_limits<double>::quiet_NaN();
+        amcl_distance_traveled = 0.0;
+        amcl_sub_ = nh_.subscribe("/amcl_pose", 10, &RRTPlanner::amclCallback, this);
+
+        log_file_.open("/home/ir-labs/catkin_ws/src/rrt_planner_git/src/rrt_planer_metrics.csv", std::ios::out | std::ios::app);
 
         if (log_file_.tellp() == 0){
-            log_file_ << "NumPathsCalculated, NumIterations, NumPathsSuccess, NumPathsBlocked, PathCalcTime, NumNodes, NodesUsedInPath, IsNewGoal\n";
+            log_file_ << "NumPathsCalculated, NumIterations, NumPathsSuccess, NumPathsBlocked, PathCalcTime, NumNodes, NodesUsedInPath, IsNewGoal, RealDistance, AmclDistance, RRTDistance\n";
         }
     }
 
@@ -61,6 +69,8 @@ namespace rrt_planner {
         num_nodes = 0;
         num_nodes_blocked = 0;
         num_iterations = 0;
+        last_amcl_pose_[0] = std::numeric_limits<double>::quiet_NaN();
+        last_amcl_pose_[1] = std::numeric_limits<double>::quiet_NaN();
 
         // Start Node
         createNewNode(start_, -1);
@@ -264,19 +274,41 @@ namespace rrt_planner {
         goal_[1] = goal[1];
     }
 
+    void RRTPlanner::amclCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr& msg) {
+        double x = msg->pose.pose.position.x;
+        double y = msg->pose.pose.position.y;
+        
+        if(!std::isnan(last_amcl_pose_[0]) || !std::isnan(last_amcl_pose_[1])){
+            double current_amcl_pose[2] = {x, y};
+            amcl_distance_traveled += computeDistance(current_amcl_pose, last_amcl_pose_);
+        }
+
+        last_amcl_pose_[0] = x;
+        last_amcl_pose_[1] = y;
+    }
+
     void RRTPlanner::logMetrics(Node node){
-          ROS_INFO("Log Metrics (%d)", num_paths_calculated);
+        ROS_INFO("Log Metrics (%d)", num_paths_calculated);
         Node next_node = node;
         int count = 1;
-        while(next_node.parent_id > 0){
+        double rrt_distance = 0;
+        double real_distance = computeDistance(start_, goal_);
+        while(next_node.parent_id > 0 || next_node.parent_id == -1){
+            if(next_node.parent_id == -1) {
+                rrt_distance += computeDistance(next_node.pos, start_);
+                break;
+            }
             count++;
-            next_node = nodes_[next_node.parent_id];
+            Node parent_node = nodes_[next_node.parent_id];
+            rrt_distance += computeDistance(next_node.pos, parent_node.pos);
+            next_node = parent_node;
         }
         if(log_file_.is_open()){
-            log_file_ << num_paths_calculated << "," << num_iterations  << "," << num_paths_calculated_success  << "," << num_nodes_blocked  << "," << total_path_calc_time  << "," << num_nodes  << "," << count  << "," << new_goal << "\n";
+            log_file_ << num_paths_calculated << "," << num_iterations  << "," << num_paths_calculated_success  << "," << num_nodes_blocked  << "," << total_path_calc_time  << "," << num_nodes  << "," << count  << "," << new_goal << "," << real_distance << "," << amcl_distance_traveled << "," << rrt_distance << "\n";
         }else{
-            std::cerr << "unable to open lg file for writng." << std::endl;
+            std::cerr << "unable to open log file for writng." << std::endl;
         }
+        amcl_distance_traveled = 0.0;
     }       
 
     RRTPlanner::~RRTPlanner(){

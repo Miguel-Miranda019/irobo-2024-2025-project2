@@ -7,6 +7,7 @@
 #include <rrt_planner/random_double_generator.h>
 #include <rrt_planner/utils.h>
 #include <vector>
+#include <geometry_msgs/PoseWithCovarianceStamped.h>
 
 namespace rrt_planner {
 
@@ -23,6 +24,9 @@ namespace rrt_planner {
 	     bool new_goal;
 	     double old_goal_[2];
 	     ros::Time start_time;
+	     double last_amcl_pose_[2];
+             double amcl_distance_traveled;
+        
             /**
              * @brief Constructor for the RRTPlanner object.
              * @param costmap A pointer to the costmap to use for planning.
@@ -85,6 +89,8 @@ namespace rrt_planner {
              * @brief Get the RRT tree.
              */
             const std::vector<Node>& getTree();
+            
+            void amclCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr& msg);
 
 	     void logMetrics(Node);
             
@@ -100,7 +106,8 @@ namespace rrt_planner {
                 int node_num;
                 ros::Publisher vertices_pub_, edges_pub_;
                 std::ofstream log_file_;
-
+		ros::Subscriber amcl_sub_;
+        	ros::NodeHandle nh_;
     };
 
 };
