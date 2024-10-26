@@ -9,10 +9,18 @@
 #include <visualization_msgs/Marker.h>
 #include <geometry_msgs/Point.h>
 
+#include <ros/ros.h>
+#include <limits>
+#include <cmath>
+#include <fstream>
+
+#include <tf/tf.h>
+#include <geometry_msgs/PoseWithCovarianceStamped.h>
+
 namespace rrt_planner {
 
     RRTPlanner::RRTPlanner(costmap_2d::Costmap2DROS *costmap, 
-            const rrt_params& params, ros::Publisher &vertices_pub, ros::Publisher &edges_pub) : params_(params), collision_dect_(costmap), vertices_pub_(vertices_pub), edges_pub_(edges_pub) {
+            const rrt_params& params, ros::Publisher &nodes_publisher_, ros::Publisher &edges_publisher_) : params_(params), collision_dect_(costmap), nodes_publisher_(nodes_publisher_), edges_publisher_(edges_publisher_) {
 
         costmap_ = costmap->getCostmap();
         node_num = 0;
@@ -23,43 +31,84 @@ namespace rrt_planner {
         random_double_y.setRange(-map_height_, map_height_);
 
         nodes_.reserve(params_.max_num_nodes);
+
+        num_paths_calculated = 0;
+        num_paths_calculated_success = 0;
+        num_nodes_blocked = 0;
+        total_path_calc_time = 0;
+        new_goal=false;
+        num_nodes = 0;
+        num_iterations = 0;
+
+        last_amcl_pose_[0] = std::numeric_limits<double>::quiet_NaN();
+        last_amcl_pose_[1] = std::numeric_limits<double>::quiet_NaN();
+        amcl_distance_traveled = 0.0;
+        amcl_sub_ = nh_.subscribe("/amcl_pose", 10, &RRTPlanner::amclCallback, this);
+
+        log_file_.open("/home/ir-labs/catkin_ws/src/rrt_planner_git/src/rrt_planer_metrics.csv", std::ios::out | std::ios::app);
+
+        if (log_file_.tellp() == 0){
+            log_file_ << "NumPathsCalculated, NumIterations, NumPathsSuccess, NumPathsBlocked, PathCalcTime, NumNodes, NodesUsedInPath, IsNewGoal, RealDistance, AmclDistance, RRTDistance\n";
+        }
     }
 
     bool RRTPlanner::planPath() {
 
+	if(goal_[0] != old_goal_[0] || goal_[0] != old_goal_[0] ){
+		new_goal = true;
+		old_goal_[0] = goal_[0];
+		old_goal_[1] = goal_[1];
+	}else{
+		new_goal = false;
+	}
+        start_time = ros::Time::now();
+
         // clear everything before planning
         node_num = 0;
         nodes_.clear();
+        num_nodes = 0;
+        num_nodes_blocked = 0;
+        num_iterations = 0;
+        last_amcl_pose_[0] = std::numeric_limits<double>::quiet_NaN();
+        last_amcl_pose_[1] = std::numeric_limits<double>::quiet_NaN();
 
         // Start Node
         createNewNode(start_, -1);
 
         double *p_rand, *p_new;
         Node nearest_node;
+        Node last_node;
+        bool success = false;
 
         for (unsigned int k = 1; k <= params_.max_num_nodes;) {
-
+            num_iterations++;
             p_rand = sampleRandomPoint();
             nearest_node = nodes_[getNearestNodeId(p_rand)];
             p_new = extendTree(nearest_node.pos, p_rand); // new point and node candidate
 
             if (!collision_dect_.obstacleBetween(nearest_node.pos, p_new)) {
-                createNewNode(p_new, nearest_node.node_id);
+                last_node = createNewNode(p_new, nearest_node.node_id);
                 k++;
 
             } else {
+                num_nodes_blocked++;
                 continue;
             }
 
             if(k > params_.min_num_nodes) {
                 
                 if(computeDistance(p_new, goal_) <= params_.goal_tolerance) {
-                    return true;
+                    success = true;
+                    num_paths_calculated_success++;
+                    break;
                 }
             }
         }
-
-        return false;
+        ros::Duration calc_time = ros::Time::now() - start_time;
+        total_path_calc_time += calc_time.toSec();
+        num_paths_calculated++;
+        logMetrics(last_node); 
+        return success;
     }
 
     // not used
@@ -92,7 +141,7 @@ namespace rrt_planner {
 
     }
 
-    void RRTPlanner::createNewNode(const double* pos, int parent_node_id) { //MOD
+    Node RRTPlanner::createNewNode(const double* pos, int parent_node_id) { //MOD
 
         Node new_node;
 
@@ -109,56 +158,55 @@ namespace rrt_planner {
         //add the new node to the tree
         nodes_.push_back(new_node);
 
+        publishTree();
+
+        num_nodes++;
+        return new_node;        
+    }
+
+    void RRTPlanner::publishTree() {
+
         sensor_msgs::PointCloud cloud;
         cloud.header.frame_id = "map";
         cloud.header.stamp = ros::Time::now();
-
-        for (Node n : nodes_)
-        {
-            geometry_msgs::Point32 p;
-            p.x = n.pos[0];
-            p.y = n.pos[1];
-            p.z = 0.0;
-            cloud.points.push_back(p);
-        }
-
-        vertices_pub_.publish(cloud);
 
         visualization_msgs::Marker edges;
         edges.header.frame_id = "map";
         edges.ns = "tree_edges";
         edges.type = visualization_msgs::Marker::LINE_LIST;
         edges.action = visualization_msgs::Marker::ADD;
-
         edges.pose.orientation.w = 1.0;
-        edges.scale.x = 0.01;
-
+        edges.scale.x = 0.02;
         edges.color.r = 1.0;
         edges.color.a = 1.0;
 
-        for (const auto &node : nodes_)
-        {
-            if (node.parent_id == -1)
-                continue;
+        for (Node node : nodes_) {
+            geometry_msgs::Point32 p;
+            p.x = node.pos[0];
+            p.y = node.pos[1];
+            p.z = 0.0;
+            cloud.points.push_back(p);
 
-            geometry_msgs::Point start, end;
+            if (node.parent_id != -1) {
 
-            const auto &parent = nodes_[node.parent_id];
+                geometry_msgs::Point start, end;
 
-            start.x = parent.pos[0];
-            start.y = parent.pos[1];
-            start.z = 0.0;
+                start.x = nodes_[node.parent_id].pos[0];
+                start.y = nodes_[node.parent_id].pos[1];
+                start.z = 0.0;
 
-            end.x = node.pos[0];
-            end.y = node.pos[1];
-            end.z = 0.0;
+                end.x = node.pos[0];
+                end.y = node.pos[1];
+                end.z = 0.0;
 
-            edges.points.push_back(start);
-            edges.points.push_back(end);
-        }
+                edges.points.push_back(start);
+                edges.points.push_back(end);
+            }
+        }   
 
-        edges_pub_.publish(edges);         
-    }
+        nodes_publisher_.publish(cloud);
+        edges_publisher_.publish(edges);  
+    }  
 
     double* RRTPlanner::sampleRandomPoint() { //MOD
         double random_prob = random_double_x.generate();
@@ -221,6 +269,49 @@ namespace rrt_planner {
     void RRTPlanner::setGoal(double *goal) {
         goal_[0] = goal[0];
         goal_[1] = goal[1];
+    }
+
+    void RRTPlanner::amclCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr& msg) {
+        double x = msg->pose.pose.position.x;
+        double y = msg->pose.pose.position.y;
+        
+        if(!std::isnan(last_amcl_pose_[0]) || !std::isnan(last_amcl_pose_[1])){
+            double current_amcl_pose[2] = {x, y};
+            amcl_distance_traveled += computeDistance(current_amcl_pose, last_amcl_pose_);
+        }
+
+        last_amcl_pose_[0] = x;
+        last_amcl_pose_[1] = y;
+    }
+
+    void RRTPlanner::logMetrics(Node node){
+        ROS_INFO("Log Metrics (%d)", num_paths_calculated);
+        Node next_node = node;
+        int count = 1;
+        double rrt_distance = 0;
+        double real_distance = computeDistance(start_, goal_);
+        while(next_node.parent_id > 0 || next_node.parent_id == -1){
+            if(next_node.parent_id == -1) {
+                rrt_distance += computeDistance(next_node.pos, start_);
+                break;
+            }
+            count++;
+            Node parent_node = nodes_[next_node.parent_id];
+            rrt_distance += computeDistance(next_node.pos, parent_node.pos);
+            next_node = parent_node;
+        }
+        if(log_file_.is_open()){
+            log_file_ << num_paths_calculated << "," << num_iterations  << "," << num_paths_calculated_success  << "," << num_nodes_blocked  << "," << total_path_calc_time  << "," << num_nodes  << "," << count  << "," << new_goal << "," << real_distance << "," << amcl_distance_traveled << "," << rrt_distance << "\n";
+        }else{
+            std::cerr << "unable to open log file for writng." << std::endl;
+        }
+        amcl_distance_traveled = 0.0;
+    }       
+
+    RRTPlanner::~RRTPlanner(){
+        if(log_file_.is_open()){
+            log_file_.close();
+        }
     }
 
 };
