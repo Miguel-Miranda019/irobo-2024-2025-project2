@@ -32,7 +32,7 @@ namespace rrt_planner {
              * @param costmap A pointer to the costmap to use for planning.
              * @param params Struct with parameters to build the tree.
              */
-            RRTPlanner(costmap_2d::Costmap2DROS *costmap, const rrt_params& params, ros::Publisher& vertices_pub, ros::Publisher& edges_pub);
+            RRTPlanner(costmap_2d::Costmap2DROS *costmap, const rrt_params& params, ros::Publisher& nodes_publisher_, ros::Publisher& edges_publisher_);
 	     ~RRTPlanner();
             /**
              * @brief   Plan a path using RRT
@@ -61,6 +61,7 @@ namespace rrt_planner {
              */
             Node createNewNode(const double* pos, int parent_node_id);
 
+	    void publishTree(); 
             /** 
              * @brief Connect the sampled random point to nearest tree node.
              * @param start 2D coordinates of nearest existing tree node to random point
@@ -104,7 +105,7 @@ namespace rrt_planner {
                 CollisionDetector collision_dect_;
                 RandomDoubleGenerator random_double_x, random_double_y;
                 int node_num;
-                ros::Publisher vertices_pub_, edges_pub_;
+                ros::Publisher nodes_publisher_, edges_publisher_;
                 std::ofstream log_file_;
 		ros::Subscriber amcl_sub_;
         	ros::NodeHandle nh_;

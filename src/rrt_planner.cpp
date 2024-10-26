@@ -20,7 +20,7 @@
 namespace rrt_planner {
 
     RRTPlanner::RRTPlanner(costmap_2d::Costmap2DROS *costmap, 
-            const rrt_params& params, ros::Publisher &vertices_pub, ros::Publisher &edges_pub) : params_(params), collision_dect_(costmap), vertices_pub_(vertices_pub), edges_pub_(edges_pub) {
+            const rrt_params& params, ros::Publisher &nodes_publisher_, ros::Publisher &edges_publisher_) : params_(params), collision_dect_(costmap), nodes_publisher_(nodes_publisher_), edges_publisher_(edges_publisher_) {
 
         costmap_ = costmap->getCostmap();
         node_num = 0;
@@ -158,58 +158,55 @@ namespace rrt_planner {
         //add the new node to the tree
         nodes_.push_back(new_node);
 
+        publishTree();
+
+        num_nodes++;
+        return new_node;        
+    }
+
+    void RRTPlanner::publishTree() {
+
         sensor_msgs::PointCloud cloud;
         cloud.header.frame_id = "map";
         cloud.header.stamp = ros::Time::now();
-
-        for (Node n : nodes_)
-        {
-            geometry_msgs::Point32 p;
-            p.x = n.pos[0];
-            p.y = n.pos[1];
-            p.z = 0.0;
-            cloud.points.push_back(p);
-        }
-
-        vertices_pub_.publish(cloud);
 
         visualization_msgs::Marker edges;
         edges.header.frame_id = "map";
         edges.ns = "tree_edges";
         edges.type = visualization_msgs::Marker::LINE_LIST;
         edges.action = visualization_msgs::Marker::ADD;
-
         edges.pose.orientation.w = 1.0;
-        edges.scale.x = 0.01;
-
+        edges.scale.x = 0.02;
         edges.color.r = 1.0;
         edges.color.a = 1.0;
 
-        for (const auto &node : nodes_)
-        {
-            if (node.parent_id == -1)
-                continue;
+        for (Node node : nodes_) {
+            geometry_msgs::Point32 p;
+            p.x = node.pos[0];
+            p.y = node.pos[1];
+            p.z = 0.0;
+            cloud.points.push_back(p);
 
-            geometry_msgs::Point start, end;
+            if (node.parent_id != -1) {
 
-            const auto &parent = nodes_[node.parent_id];
+                geometry_msgs::Point start, end;
 
-            start.x = parent.pos[0];
-            start.y = parent.pos[1];
-            start.z = 0.0;
+                start.x = nodes_[node.parent_id].pos[0];
+                start.y = nodes_[node.parent_id].pos[1];
+                start.z = 0.0;
 
-            end.x = node.pos[0];
-            end.y = node.pos[1];
-            end.z = 0.0;
+                end.x = node.pos[0];
+                end.y = node.pos[1];
+                end.z = 0.0;
 
-            edges.points.push_back(start);
-            edges.points.push_back(end);
-        }
+                edges.points.push_back(start);
+                edges.points.push_back(end);
+            }
+        }   
 
-        edges_pub_.publish(edges); 
-        num_nodes++;
-        return new_node;        
-    }
+        nodes_publisher_.publish(cloud);
+        edges_publisher_.publish(edges);  
+    }  
 
     double* RRTPlanner::sampleRandomPoint() { //MOD
         double random_prob = random_double_x.generate();
