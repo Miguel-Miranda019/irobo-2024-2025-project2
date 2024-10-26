@@ -6,16 +6,14 @@
 #include <sensor_msgs/PointCloud.h>
 
 #include <unordered_map>
-#include <visualization_msgs/Marker.h>
 #include <geometry_msgs/Point.h>
-
+#include <geometry_msgs/PoseWithCovarianceStamped.h>
+#include <visualization_msgs/Marker.h>
 #include <ros/ros.h>
 #include <limits>
 #include <cmath>
 #include <fstream>
-
 #include <tf/tf.h>
-#include <geometry_msgs/PoseWithCovarianceStamped.h>
 
 namespace rrt_planner {
 
@@ -63,7 +61,6 @@ namespace rrt_planner {
 	}
         start_time = ros::Time::now();
 
-        // clear everything before planning
         node_num = 0;
         nodes_.clear();
         num_nodes = 0;
@@ -72,7 +69,6 @@ namespace rrt_planner {
         last_amcl_pose_[0] = std::numeric_limits<double>::quiet_NaN();
         last_amcl_pose_[1] = std::numeric_limits<double>::quiet_NaN();
 
-        // Start Node
         createNewNode(start_, -1);
 
         double *p_rand, *p_new;
@@ -84,7 +80,7 @@ namespace rrt_planner {
             num_iterations++;
             p_rand = sampleRandomPoint();
             nearest_node = nodes_[getNearestNodeId(p_rand)];
-            p_new = extendTree(nearest_node.pos, p_rand); // new point and node candidate
+            p_new = extendTree(nearest_node.pos, p_rand);
 
             if (!collision_dect_.obstacleBetween(nearest_node.pos, p_new)) {
                 last_node = createNewNode(p_new, nearest_node.node_id);

@@ -81,7 +81,7 @@ namespace rrt_planner {
              */
             costmap_2d::Costmap2D *costmap_;
             std::shared_ptr<RRTPlanner> planner_;
-            ros::Publisher plan_pub_;
+            ros::Publisher plan_publisher_;
             bool initialized_;
 
 

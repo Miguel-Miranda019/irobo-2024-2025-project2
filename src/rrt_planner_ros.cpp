@@ -40,12 +40,11 @@ namespace rrt_planner {
             nh.param("rrt/min_num_nodes", params_.min_num_nodes, 5000);
             nh.param("rrt/max_num_nodes", params_.max_num_nodes, 30000);
 
-            plan_pub_ = nh.advertise<nav_msgs::Path>("global_plan", 1);
-            ros::Publisher vertices_pub = nh.advertise<visualization_msgs::Marker>("vertices", 1);
-            ros::Publisher edges_pub = nh.advertise<visualization_msgs::Marker>("edges", 1);
-            ros::Publisher pub = nh.advertise<sensor_msgs::PointCloud>("global_plan_pointcloud", 1);
+            plan_publisher_ = nh.advertise<nav_msgs::Path>("global_plan", 1);
+            ros::Publisher nodes_publisher = nh.advertise<visualization_msgs::Marker>("nodes", 1);
+            ros::Publisher edges_publisher = nh.advertise<visualization_msgs::Marker>("edges", 1);
 
-            planner_ = std::shared_ptr<RRTPlanner>(new RRTPlanner(costmap, params_, vertices_pub, edges_pub));
+            planner_ = std::shared_ptr<RRTPlanner>(new RRTPlanner(costmap, params_, nodes_publisher, edges_publisher));
             initialized_ = true;
         }
         else {
@@ -186,7 +185,7 @@ namespace rrt_planner {
       gui_path.poses[i] = path[i];
     }
     
-    plan_pub_.publish(gui_path);
+    plan_publisher_.publish(gui_path);
   }
 
 };   
