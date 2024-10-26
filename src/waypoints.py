@@ -50,15 +50,12 @@ if __name__ == '__main__':
             (-0.73, -1.86, 0)
         ]
 
-
-        while not rospy.is_shutdown():
-            for waypoint in waypoints:
-                x, y, theta = waypoint
-                result = movebase_client(x, y, theta)
-                if result:
-                    rospy.loginfo(f"Reached waypoint: {waypoint}")
-                else:
-                    rospy.loginfo(f"Failed to reach waypoint: {waypoint}")
-            rospy.sleep(1)  # Adjust the sleep time if needed
+        for waypoint in waypoints:
+            x, y, theta = waypoint
+            result = movebase_client(x, y, theta)
+            if result:
+                rospy.loginfo(f"Reached waypoint: {waypoint}")
+            else:
+                rospy.loginfo(f"Failed to reach waypoint: {waypoint}")
     except rospy.ROSInterruptException:
         rospy.loginfo("Navigation test finished.")

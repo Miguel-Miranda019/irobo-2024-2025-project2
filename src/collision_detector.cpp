@@ -25,17 +25,7 @@ namespace rrt_planner {
         //get the cost value at the map cell
         unsigned char cost = costmap_->getCost(mx,my);
 
-        /*if(cost >= costmap_2d::INSCRIBED_INFLATED_OBSTACLE || cost == costmap_2d::NO_INFORMATION){
-            return false;
-        } */
-
         return cost == costmap_2d::FREE_SPACE;
-        /*
-        if(cost >= 128 || cost == costmap_2d::NO_INFORMATION){
-            return false;
-        }
-
-        return true;*/
 
     }
 

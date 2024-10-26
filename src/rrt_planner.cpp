@@ -45,7 +45,7 @@ namespace rrt_planner {
         amcl_distance_traveled = 0.0;
         amcl_sub_ = nh_.subscribe("/amcl_pose", 10, &RRTPlanner::amclCallback, this);
 
-        log_file_.open("/home/ir-labs/catkin_ws/src/rrt_planner_git/src/rrt_planer_metrics.csv", std::ios::out | std::ios::app);
+        log_file_.open("/home/ir-labs/catkin_ws/src/rrt_planner/csv/rrt_planer_metrics.csv", std::ios::out | std::ios::app);
 
         if (log_file_.tellp() == 0){
             log_file_ << "NumPathsCalculated, NumIterations, NumPathsSuccess, NumPathsBlocked, PathCalcTime, NumNodes, NodesUsedInPath, IsNewGoal, RealDistance, AmclDistance, RRTDistance\n";
@@ -109,17 +109,6 @@ namespace rrt_planner {
         num_paths_calculated++;
         logMetrics(last_node); 
         return success;
-    }
-
-    // not used
-    double RRTPlanner::computePathLength(){
-        double path_length = 0;
-        int node_id = nodes_.size() - 1;
-        while(node_id !=0){
-            path_length += computeDistance(nodes_[node_id].pos, nodes_[nodes_[node_id].parent_id].pos);
-            node_id = nodes_[node_id].parent_id;
-        }
-        return path_length;
     }
 
     int RRTPlanner::getNearestNodeId(const double *point) {  //MOD
